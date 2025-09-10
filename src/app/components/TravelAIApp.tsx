@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { Camera, MapPin, LogOut, Sparkles, Download, Share2, ArrowLeft, X } from 'lucide-react';
@@ -19,6 +19,16 @@ const LOCATIONS = [
   { id: 'thailand', name: 'Thailand', flag: '🇹🇭', description: 'Bangkok temples' },
 ];
 
+const LOADING_MESSAGES = [
+  "Validating that the uploaded image contains a person...",
+  "Analyzing your photo for optimal placement...",
+  "Preparing AI model for image generation...",
+  "Creating your travel photo with advanced AI...",
+  "Enhancing details and adjusting lighting...",
+  "Finalizing your personalized travel image...",
+  "Almost ready! Adding finishing touches...",
+];
+
 export default function TravelAIApp() {
   const { user, logout } = useAuth();
   const [, setSelectedFile] = useState<File | null>(null);
@@ -29,7 +39,22 @@ export default function TravelAIApp() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<'upload' | 'location' | 'generate' | 'result'>('upload');
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Rotate loading messages every 2 seconds during generation
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isGenerating) {
+      setLoadingMessageIndex(0);
+      interval = setInterval(() => {
+        setLoadingMessageIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
+      }, 2000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isGenerating]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -206,7 +231,7 @@ export default function TravelAIApp() {
       )}
 
       {/* Main Content */}
-      <main className="px-4 py-4">
+      <main className="px-4 py-2">
         {currentStep === 'upload' && (
           <div className="max-w-sm mx-auto">
             <div className="text-center mb-6">
@@ -325,25 +350,14 @@ export default function TravelAIApp() {
         )}
 
         {currentStep === 'result' && (
-          <div className="max-w-sm mx-auto min-h-screen flex flex-col justify-center">
-            {/* Close button for result page */}
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={resetFlow}
-                className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-                title="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
+          <div className="max-w-sm mx-auto min-h-screen flex flex-col justify-start pt-2 sm:pt-4">
             {isGenerating ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Generating...</h3>
-                <p className="text-gray-600">Creating your travel photo with AI</p>
+                <p className="text-gray-600 px-4">{LOADING_MESSAGES[loadingMessageIndex]}</p>
               </div>
             ) : error ? (
               <div className="text-center py-12">
@@ -367,8 +381,15 @@ export default function TravelAIApp() {
                 </div>
               </div>
             ) : generatedImage ? (
-              <div className="space-y-6">
-                <div className="text-center">
+              <div className="space-y-4">
+                <div className="text-center relative">
+                  <button
+                    onClick={resetFlow}
+                    className="absolute top-0 right-0 p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                    title="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Your Travel Photo</h3>
                   <p className="text-gray-600">Here&apos;s your AI-generated image in {selectedLocationData?.name}</p>
                 </div>
@@ -387,7 +408,7 @@ export default function TravelAIApp() {
                   </div>
                 </div>
                 
-                <div className="flex gap-3">
+                <div className="flex gap-3 mb-3">
                   <button className="flex-1 bg-gray-100 text-gray-900 py-3 px-4 rounded-2xl font-medium hover:bg-gray-200 active:bg-gray-300 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98]">
                     <Download className="w-4 h-4" />
                     Download

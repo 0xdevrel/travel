@@ -119,6 +119,11 @@ textarea {
   body {
     font-size: 14px;
   }
+  
+  /* Optimize spacing for very small screens */
+  .space-y-3 > * + * {
+    margin-top: 0.5rem;
+  }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
