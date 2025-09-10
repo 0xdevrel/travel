@@ -1,10 +1,10 @@
 'use client';
 
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import LandingPage from './components/WorldIDAuth';
 import TravelAIApp from './components/TravelAIApp';
 
-function AppContent() {
+export default function Home() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -19,12 +19,4 @@ function AppContent() {
   }
 
   return user ? <TravelAIApp /> : <LandingPage />;
-}
-
-export default function Home() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
 }

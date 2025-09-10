@@ -137,7 +137,7 @@ export default function TravelAIApp() {
                 <FaUser className="w-4 h-4 text-gray-600" />
               </div>
               <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                {user?.username}
+                {user?.username || user?.walletAddress?.slice(0, 6) + '...' + user?.walletAddress?.slice(-4)}
               </span>
             </div>
             <button

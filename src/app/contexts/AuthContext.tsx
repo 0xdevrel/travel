@@ -3,13 +3,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface User {
-  username: string;
+  walletAddress: string;
+  username?: string;
   isAuthenticated: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string) => void;
+  login: (userData: { walletAddress: string; username?: string }) => void;
   logout: () => void;
   isLoading: boolean;
 }
@@ -29,13 +30,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (username: string) => {
-    const userData = {
-      username,
+  const login = (userData: { walletAddress: string; username?: string }) => {
+    const user = {
+      walletAddress: userData.walletAddress,
+      username: userData.username,
       isAuthenticated: true,
     };
-    setUser(userData);
-    localStorage.setItem('travel-ai-user', JSON.stringify(userData));
+    setUser(user);
+    localStorage.setItem('travel-ai-user', JSON.stringify(user));
   };
 
   const logout = () => {

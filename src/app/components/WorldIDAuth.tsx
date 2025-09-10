@@ -3,27 +3,86 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Camera, Shield } from 'lucide-react';
+import { MiniKit, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
 
 export default function LandingPage() {
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleWorldIDLogin = async () => {
+  const handleWalletAuth = async () => {
+    if (!MiniKit.isInstalled()) {
+      setError("Please open this app in World App");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // Simulate World ID authentication
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 1. Get nonce from backend
+      const res = await fetch(`/api/nonce`);
+      if (!res.ok) {
+        throw new Error("Failed to get nonce");
+      }
+      const { nonce } = await res.json();
+
+      // 2. Trigger wallet authentication
+      const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
+        nonce: nonce,
+        requestId: 'travel-ai-auth', // Optional
+        expirationTime: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        notBefore: new Date(new Date().getTime() - 24 * 60 * 60 * 1000), // 1 day ago
+        statement: 'Sign in to Travel AI - Generate AI images of yourself in different locations around the world',
+      });
+
+      if (finalPayload.status === 'error') {
+        setError("Authentication failed. Please try again.");
+        return;
+      }
+
+      // 3. Verify the signature on backend
+      const response = await fetch('/api/complete-siwe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          payload: finalPayload as MiniAppWalletAuthSuccessPayload,
+          nonce,
+        }),
+      });
+
+      const result = await response.json();
       
-      // Mock user data - in real implementation, this would come from World ID
-      const mockUsername = `user_${Math.random().toString(36).substr(2, 9)}`;
-      
-      login(mockUsername);
-    } catch (err) {
-      setError('Authentication failed. Please try again.');
-      console.error('World ID authentication error:', err);
+      if (response.ok && result.status === "success" && result.isValid) {
+        // 4. Get user info from the payload
+        const walletAddress = (finalPayload as MiniAppWalletAuthSuccessPayload).address;
+        
+        // Try to get username from MiniKit if available
+        let username: string | undefined;
+        try {
+          if (MiniKit.isInstalled()) {
+            const userInfo = await MiniKit.getUserByAddress(walletAddress);
+            username = userInfo?.username;
+          }
+        } catch (error) {
+          console.warn('Could not fetch username:', error);
+        }
+        
+        const userData = {
+          walletAddress: walletAddress,
+          username: username,
+        };
+        
+        // Update auth context
+        login(userData);
+      } else {
+        setError(result.message || "Authentication verification failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Wallet auth error:", error);
+      setError(error instanceof Error ? error.message : "Authentication failed");
     } finally {
       setIsLoading(false);
     }
@@ -98,19 +157,19 @@ export default function LandingPage() {
 
           {/* CTA Button */}
           <button
-            onClick={handleWorldIDLogin}
+            onClick={handleWalletAuth}
             disabled={isLoading}
             className="w-full bg-gray-900 text-white py-4 px-6 rounded-2xl font-semibold text-lg hover:bg-gray-800 active:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-3 min-h-[56px] active:scale-[0.98]"
           >
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Verifying with World ID...
+                  Authenticating with Wallet...
                 </>
               ) : (
                 <>
                   <Shield className="w-5 h-5" />
-                  Verify with World ID
+                  Sign in with Wallet
                 </>
               )}
             </button>
@@ -137,7 +196,7 @@ export default function LandingPage() {
               </a>
             </p>
             <p className="text-gray-400 text-xs mt-1">
-              World ID required • Built for World Mini Apps
+              Wallet authentication required • Built for World Mini Apps
             </p>
           </div>
         </div>
