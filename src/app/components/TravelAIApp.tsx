@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Camera, MapPin, LogOut, Sparkles, Download, Share2, ArrowLeft, X } from 'lucide-react';
 import { FaUser } from 'react-icons/fa';
 import { processImageFile } from '../utils/imageUtils';
+import { MiniKit, ResponseEvent } from '@worldcoin/minikit-js';
 
 const LOCATIONS = [
   { id: 'france', name: 'France', flag: '🇫🇷', description: 'Eiffel Tower, Paris' },
@@ -55,6 +56,39 @@ export default function TravelAIApp() {
       if (interval) clearInterval(interval);
     };
   }, [isGenerating]);
+
+  // Listen for share events
+  useEffect(() => {
+    MiniKit.subscribe(ResponseEvent.MiniAppShare, (payload) => {
+      // Handle share response based on the documentation
+      if (payload && 'status' in payload) {
+        if (payload.status === 'success') {
+          console.log('Share completed successfully');
+        } else if (payload.status === 'error') {
+          console.log('Share failed:', 'error' in payload ? payload.error : 'Unknown error');
+        }
+      } else {
+        // iOS web share sheet has no response
+        console.log('Share action completed (iOS web share)');
+      }
+    });
+
+    // Global error handler to catch any unhandled abort errors
+    const handleUnhandledError = (event: ErrorEvent) => {
+      if (event.error && 
+          event.error.name === 'AbortError' && 
+          event.error.message.includes('cancellation of share')) {
+        event.preventDefault();
+        return false;
+      }
+    };
+
+    window.addEventListener('error', handleUnhandledError);
+    
+    return () => {
+      window.removeEventListener('error', handleUnhandledError);
+    };
+  }, []);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -138,6 +172,96 @@ export default function TravelAIApp() {
     setGeneratedImage(null);
     setError(null);
     setCurrentStep('upload');
+  };
+
+  const handleDownload = async () => {
+    if (!generatedImage) return;
+    
+    try {
+      // Convert data URL to blob
+      const response = await fetch(generatedImage);
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `travel-photo-${selectedLocationData?.name.toLowerCase()}-${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!generatedImage) return;
+    
+    // Check if MiniKit is available
+    if (!MiniKit.isInstalled()) {
+      console.warn('MiniKit not available, falling back to native share');
+      // Fallback to native Web Share API if available
+      if (navigator.share) {
+        try {
+          const response = await fetch(generatedImage);
+          const blob = await response.blob();
+          const file = new File([blob], `travel-photo-${selectedLocationData?.name.toLowerCase()}.jpg`, { type: 'image/jpeg' });
+          
+          await navigator.share({
+            files: [file],
+            title: 'My AI Travel Photo',
+            text: `Just check out my travel picture from Travel AI on World mini store! ✈️`
+          });
+        } catch (error) {
+          // Silently handle cancellation and unsupported errors
+          if (error instanceof Error && 
+              (error.name === 'AbortError' || 
+               error.message.includes('cancellation') ||
+               error.message.includes('not supported'))) {
+            return;
+          }
+          console.warn('Native share encountered an issue:', error);
+        }
+      } else {
+        console.warn('Share not supported on this device');
+      }
+      return;
+    }
+    
+    try {
+      // Convert data URL to file
+      const response = await fetch(generatedImage);
+      const blob = await response.blob();
+      const file = new File([blob], `travel-photo-${selectedLocationData?.name.toLowerCase()}.jpg`, { type: 'image/jpeg' });
+      
+      await MiniKit.commandsAsync.share({
+        files: [file],
+        title: 'My AI Travel Photo',
+        text: `Just check out my travel picture from Travel AI on World mini store! ✈️`,
+        url: window.location.origin
+      });
+    } catch (error) {
+      // Silently handle all share-related errors to prevent console spam
+      if (error instanceof Error) {
+        if (error.name === 'AbortError' || 
+            error.message.includes('cancellation of share') ||
+            error.message.includes('Abort due to cancellation')) {
+          // User cancelled the share dialog - this is normal behavior, don't log
+          return;
+        }
+        
+        if (error.message.includes('not supported') || 
+            error.message.includes('not available')) {
+          // Share not supported - don't log as error
+          return;
+        }
+      }
+      
+      // Only log unexpected errors
+      console.warn('Share encountered an issue:', error);
+    }
   };
 
   const selectedLocationData = LOCATIONS.find(loc => loc.id === selectedLocation);
@@ -350,7 +474,7 @@ export default function TravelAIApp() {
         )}
 
         {currentStep === 'result' && (
-          <div className="max-w-sm mx-auto min-h-screen flex flex-col justify-start pt-2 sm:pt-4">
+          <div className="max-w-sm mx-auto min-h-screen flex flex-col justify-start pt-2 sm:pt-4 -mb-1.5">
             {isGenerating ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -409,11 +533,17 @@ export default function TravelAIApp() {
                 </div>
                 
                 <div className="flex gap-3 mb-3">
-                  <button className="flex-1 bg-gray-100 text-gray-900 py-3 px-4 rounded-2xl font-medium hover:bg-gray-200 active:bg-gray-300 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98]">
+                  <button 
+                    onClick={handleDownload}
+                    className="flex-1 bg-gray-100 text-gray-900 py-3 px-4 rounded-2xl font-medium hover:bg-gray-200 active:bg-gray-300 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98]"
+                  >
                     <Download className="w-4 h-4" />
                     Download
                   </button>
-                  <button className="flex-1 bg-gray-900 text-white py-3 px-4 rounded-2xl font-medium hover:bg-gray-800 active:bg-gray-700 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98]">
+                  <button 
+                    onClick={handleShare}
+                    className="flex-1 bg-gray-900 text-white py-3 px-4 rounded-2xl font-medium hover:bg-gray-800 active:bg-gray-700 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98]"
+                  >
                     <Share2 className="w-4 h-4" />
                     Share
                   </button>
@@ -421,7 +551,7 @@ export default function TravelAIApp() {
                 
                 <button
                   onClick={resetFlow}
-                  className="w-full bg-gray-200 text-gray-900 py-3 px-4 rounded-2xl font-medium hover:bg-gray-300 active:bg-gray-400 transition-colors min-h-[48px] active:scale-[0.98]"
+                  className="w-full bg-gray-200 text-gray-900 py-3 px-4 rounded-2xl font-medium hover:bg-gray-300 active:bg-gray-400 transition-colors min-h-[46px] active:scale-[0.98]"
                 >
                   Create Another Photo
                 </button>
