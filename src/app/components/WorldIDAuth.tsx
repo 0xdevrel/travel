@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Camera, Shield } from 'lucide-react';
 import { MiniKit, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LandingPage() {
   const { login } = useAuth();
@@ -104,8 +105,15 @@ export default function LandingPage() {
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-lg p-6">
             {/* App Icon */}
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-teal-500 rounded-2xl mx-auto mb-6 flex items-center justify-center">
-              <Camera className="w-10 h-10 text-white" />
+            <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+              <Image
+                src="/logo.png"
+                alt="Travel AI Logo"
+                width={100}
+                height={100}
+                className="w-20 h-20 rounded-2xl object-cover"
+                priority
+              />
             </div>
             
             {/* App Name */}

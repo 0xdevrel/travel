@@ -417,8 +417,14 @@ export default function TravelAIApp() {
           <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-teal-500 rounded-xl flex items-center justify-center">
-                  <Camera className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center overflow-hidden">
+                  <Image
+                    src="/logo.png"
+                    alt="Travel AI Logo"
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 object-cover"
+                  />
                 </div>
                 <h1 className="text-lg font-semibold text-gray-900">Travel AI</h1>
               </div>
