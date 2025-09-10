@@ -288,7 +288,7 @@ export default function TravelAIApp() {
   };
 
   const handleShare = async () => {
-    if (!generatedImageUrl) return;
+    if (!generatedImage) return;
     
     // Check if MiniKit is available
     if (!MiniKit.isInstalled()) {
@@ -296,7 +296,8 @@ export default function TravelAIApp() {
       // Fallback to native Web Share API if available
       if (navigator.share) {
         try {
-          const response = await fetch(generatedImageUrl);
+          // Convert data URL to blob and file
+          const response = await fetch(generatedImage);
           const blob = await response.blob();
           const file = new File([blob], `travel-photo-${selectedLocationData?.name.toLowerCase()}.jpg`, { type: 'image/jpeg' });
           
@@ -322,16 +323,15 @@ export default function TravelAIApp() {
     }
     
     try {
-      // Convert R2 URL to file
-      const response = await fetch(generatedImageUrl);
+      // Convert data URL to blob and file for World Mini App share
+      const response = await fetch(generatedImage);
       const blob = await response.blob();
       const file = new File([blob], `travel-photo-${selectedLocationData?.name.toLowerCase()}.jpg`, { type: 'image/jpeg' });
       
       await MiniKit.commandsAsync.share({
         files: [file],
         title: 'My AI Travel Photo',
-        text: `Just check out my travel picture from Travel AI on World mini store! ✈️`,
-        url: window.location.origin
+        text: `Just check out my travel picture from Travel AI on World mini store! ✈️`
       });
     } catch (error) {
       // Silently handle all share-related errors to prevent console spam
@@ -664,12 +664,49 @@ export default function TravelAIApp() {
         {currentStep === 'result' && (
           <div className="max-w-sm mx-auto min-h-screen flex flex-col justify-start pt-2 sm:pt-4 -mb-1.5">
             {isGenerating ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+                {/* Enhanced Loading Spinner with Animation */}
+                <div className="relative mb-8">
+                  {/* Outer glow ring */}
+                  <div className="absolute inset-0 w-20 h-20 rounded-full bg-gradient-to-r from-blue-500/20 to-teal-500/20 animate-pulse"></div>
+                  
+                  {/* Main spinner container */}
+                  <div className="relative w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center border border-gray-100">
+                    {/* Primary spinner */}
+                    <div className="w-10 h-10 border-3 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                    
+                    {/* Inner accent */}
+                    <div className="absolute w-6 h-6 border-2 border-gray-100 border-t-teal-400 rounded-full animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
+                  </div>
+                  
+                  {/* Floating dots animation */}
+                  <div className="absolute -top-2 -right-2 w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0s'}}></div>
+                  <div className="absolute -bottom-2 -left-2 w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{animationDelay: '0.5s'}}></div>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Generating...</h3>
-                <p className="text-gray-600 px-4">{LOADING_MESSAGES[loadingMessageIndex]}</p>
+                
+                {/* Title with subtle animation */}
+                <h3 className="text-2xl font-bold text-gray-900 mb-3 animate-pulse">Generating...</h3>
+                
+                {/* Loading message with fade transition */}
+                <div className="text-center max-w-sm">
+                  <p className="text-gray-600 text-base leading-relaxed transition-all duration-500 ease-in-out">
+                    {LOADING_MESSAGES[loadingMessageIndex]}
+                  </p>
+                  
+                  {/* Progress indicator dots */}
+                  <div className="flex justify-center mt-4 space-x-2">
+                    {LOADING_MESSAGES.map((_, index) => (
+                      <div
+                        key={index}
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                          index === loadingMessageIndex 
+                            ? 'bg-blue-500 scale-125' 
+                            : 'bg-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : error ? (
               <div className="text-center py-12">
@@ -766,10 +803,10 @@ export default function TravelAIApp() {
                   </button>
                   <button 
                     onClick={handleShare}
-                    disabled={!generatedImageUrl}
+                    disabled={!generatedImage}
                     className="flex-1 bg-teal-50 text-teal-700 py-3 px-4 rounded-2xl font-medium hover:bg-teal-100 active:bg-teal-200 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98] border border-teal-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {!generatedImageUrl ? (
+                    {!generatedImage ? (
                       <>
                         <div className="w-4 h-4 border-2 border-teal-700 border-t-transparent rounded-full animate-spin"></div>
                         Preparing...
