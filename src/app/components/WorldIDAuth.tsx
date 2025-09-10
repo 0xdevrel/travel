@@ -202,19 +202,27 @@ export default function LandingPage() {
           {/* Footer */}
           <div className="text-center mt-6">
             <p className="text-gray-500 text-sm">
-              Made with <span role="img" aria-label="love">❤️</span> by IBRL Labs
+              Made with <span role="img" aria-label="love">❤️</span> by{' '}
+              <a
+                href="https://www.ibrlc.xyz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-teal-500 transition-colors"
+              >
+                IBRL Labs
+              </a>
             </p>
             <p>
               <Link
                 href="/privacy"
-                className="text-gray-400 text-xs hover:text-gray-600 transition-colors"
+                className="text-blue-400 text-xs hover:text-blue-500 transition-colors"
               >
                 Privacy Policy
               </Link>
               <span className="text-gray-300 text-xs">•</span>
               <Link
                 href="/terms"
-                className="text-gray-400 text-xs hover:text-gray-600 transition-colors"
+                className="text-teal-400 text-xs hover:text-teal-500 transition-colors"
               >
                 Terms of Service
               </Link>
