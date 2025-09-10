@@ -287,7 +287,7 @@ export default function TravelAIApp() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `travel-photo-${selectedLocationData?.name.toLowerCase()}-${Date.now()}.jpg`;
+      link.download = `travel-photo-${selectedLocationData?.name?.toLowerCase() || 'destination'}-${Date.now()}.jpg`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -747,29 +747,31 @@ export default function TravelAIApp() {
                   </div>
                 </div>
                 
-                <div className="flex gap-3 mb-3">
+                {/* Primary CTA - Create Another Photo */}
+                <button
+                  onClick={resetFlow}
+                  className="w-full bg-gray-900 text-white py-4 px-6 rounded-2xl font-semibold text-lg hover:bg-gray-800 active:bg-gray-700 transition-colors min-h-[56px] active:scale-[0.98] mb-4"
+                >
+                  Create Another Photo
+                </button>
+                
+                {/* Secondary Actions */}
+                <div className="flex gap-3">
                   <button 
                     onClick={handleDownload}
-                    className="flex-1 bg-gray-100 text-gray-900 py-3 px-4 rounded-2xl font-medium hover:bg-gray-200 active:bg-gray-300 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98]"
+                    className="flex-1 bg-blue-50 text-blue-700 py-3 px-4 rounded-2xl font-medium hover:bg-blue-100 active:bg-blue-200 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98] border border-blue-200"
                   >
                     <Download className="w-4 h-4" />
                     Download
                   </button>
                   <button 
                     onClick={handleShare}
-                    className="flex-1 bg-gray-900 text-white py-3 px-4 rounded-2xl font-medium hover:bg-gray-800 active:bg-gray-700 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98]"
+                    className="flex-1 bg-teal-50 text-teal-700 py-3 px-4 rounded-2xl font-medium hover:bg-teal-100 active:bg-teal-200 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98] border border-teal-200"
                   >
                     <Share2 className="w-4 h-4" />
                     Share
                   </button>
                 </div>
-                
-                <button
-                  onClick={resetFlow}
-                  className="w-full bg-gray-200 text-gray-900 py-3 px-4 rounded-2xl font-medium hover:bg-gray-300 active:bg-gray-400 transition-colors min-h-[46px] active:scale-[0.98]"
-                >
-                  Create Another Photo
-                </button>
               </div>
             ) : null}
           </div>
