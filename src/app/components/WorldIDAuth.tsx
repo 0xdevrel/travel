@@ -89,25 +89,9 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white safe-area-inset">
-      {/* Header */}
-      <div className="px-4 py-3 safe-area-inset sm:px-0">
-        <div className="w-full max-w-md mx-auto">
-          <header className="bg-black text-white py-3 px-4 rounded-t-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
-                  <Camera className="w-4 h-4 text-black" />
-                </div>
-                <h1 className="text-lg font-semibold">Travel AI</h1>
-              </div>
-            </div>
-          </header>
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-white">
       {/* Main Content */}
-      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-6">
+      <div className="flex items-center justify-center min-h-screen px-4 py-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-lg p-6">
             {/* App Icon */}
@@ -121,12 +105,12 @@ export default function LandingPage() {
             </h1>
             
             {/* Tagline */}
-            <p className="text-gray-600 text-center mb-8">
+            <p className="text-gray-600 text-center mb-6">
               Upload your photo and see yourself in amazing places around the world
             </p>
 
             {/* How it works */}
-            <div className="mb-8">
+            <div className="mb-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4">How it works</h2>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
@@ -145,7 +129,7 @@ export default function LandingPage() {
             </div>
 
             {/* Pricing */}
-            <div className="mb-8 bg-gray-50 rounded-xl p-4">
+            <div className="mb-6 bg-gray-50 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Pricing</h3>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -164,7 +148,7 @@ export default function LandingPage() {
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Authenticating with Wallet...
+                  Authenticating
                 </>
               ) : (
                 <>

@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
-import { Camera, MapPin, LogOut, Sparkles, Download, Share2, ArrowLeft } from 'lucide-react';
+import { Camera, MapPin, LogOut, Sparkles, Download, Share2, ArrowLeft, X } from 'lucide-react';
 import { FaUser } from 'react-icons/fa';
 import { processImageFile } from '../utils/imageUtils';
 
@@ -118,41 +118,44 @@ export default function TravelAIApp() {
   const selectedLocationData = LOCATIONS.find(loc => loc.id === selectedLocation);
 
   return (
-    <div className="min-h-screen bg-gray-50 safe-area-inset">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10 safe-area-inset">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-teal-500 rounded-xl flex items-center justify-center">
-                <Camera className="w-4 h-4 text-white" />
+    <div className="min-h-screen bg-gray-50">
+      {/* Header - Hidden on result page */}
+      {currentStep !== 'result' && (
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-teal-500 rounded-xl flex items-center justify-center">
+                  <Camera className="w-4 h-4 text-white" />
+                </div>
+                <h1 className="text-lg font-semibold text-gray-900">Travel AI</h1>
               </div>
-              <h1 className="text-lg font-semibold text-gray-900">Travel AI</h1>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                  <FaUser className="w-4 h-4 text-gray-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                  {user?.username || user?.walletAddress?.slice(0, 6) + '...' + user?.walletAddress?.slice(-4)}
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <FaUser className="w-4 h-4 text-gray-600" />
-              </div>
-              <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                {user?.username || user?.walletAddress?.slice(0, 6) + '...' + user?.walletAddress?.slice(-4)}
-              </span>
-            </div>
-            <button
-              onClick={logout}
-              className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-              title="Logout"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      {/* Progress Steps */}
-      <div className="px-4 py-3 bg-white border-b border-gray-200 safe-area-inset">
+      {/* Progress Steps - Hidden on result page */}
+      {currentStep !== 'result' && (
+        <div className="px-4 py-3 bg-white border-b border-gray-200">
         <div className="max-w-md mx-auto flex items-center justify-center space-x-2 sm:space-x-4">
           {[
             { id: 'upload', label: 'Photo', icon: Camera },
@@ -181,11 +184,12 @@ export default function TravelAIApp() {
             );
           })}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Back Button - Better positioned */}
       {currentStep !== 'upload' && currentStep !== 'result' && (
-        <div className="px-4 py-2 bg-white border-b border-gray-200 safe-area-inset">
+        <div className="px-4 py-2 bg-white border-b border-gray-200">
           <div className="max-w-md mx-auto">
             <button
               onClick={() => {
@@ -202,10 +206,10 @@ export default function TravelAIApp() {
       )}
 
       {/* Main Content */}
-      <main className="px-4 py-6">
+      <main className="px-4 py-4">
         {currentStep === 'upload' && (
           <div className="max-w-sm mx-auto">
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Photo</h2>
               <p className="text-gray-600">Full body image of a person is required</p>
             </div>
@@ -243,7 +247,7 @@ export default function TravelAIApp() {
 
         {currentStep === 'location' && (
           <div className="max-w-sm mx-auto">
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Destination</h2>
               <p className="text-gray-600">Where do you want to travel?</p>
             </div>
@@ -280,7 +284,7 @@ export default function TravelAIApp() {
 
         {currentStep === 'generate' && (
           <div className="max-w-sm mx-auto">
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Ready to Generate</h2>
               <p className="text-gray-600">Your photo will be placed in {selectedLocationData?.name}</p>
             </div>
@@ -321,7 +325,18 @@ export default function TravelAIApp() {
         )}
 
         {currentStep === 'result' && (
-          <div className="max-w-sm mx-auto">
+          <div className="max-w-sm mx-auto min-h-screen flex flex-col justify-center">
+            {/* Close button for result page */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={resetFlow}
+                className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
             {isGenerating ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
