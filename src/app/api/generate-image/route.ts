@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateTravelImage } from '../../services/geminiService';
+import { paymentReferences } from '../_paymentStore';
 
 export async function POST(request: NextRequest) {
   try {
-    const { imageDataUrl, location } = await request.json();
+    const { imageDataUrl, location, paymentReference } = await request.json();
 
     if (!imageDataUrl || !location) {
       return NextResponse.json(
         { error: 'Missing required parameters: imageDataUrl and location' },
         { status: 400 }
+      );
+    }
+
+    if (!paymentReference) {
+      return NextResponse.json(
+        { error: 'Payment required. Please complete payment before generating image.' },
+        { status: 402 }
       );
     }
 
@@ -20,6 +28,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Verify payment reference exists (one-time use)
+    if (!paymentReferences.has(paymentReference)) {
+      return NextResponse.json(
+        { error: 'Invalid or expired payment reference. Please complete payment again.' },
+        { status: 402 }
+      );
+    }
+
+    // Remove the payment reference (one-time use)
+    paymentReferences.delete(paymentReference);
 
     // Generate the travel image using Gemini AI
     const generatedImageDataUrl = await generateTravelImage(imageDataUrl, location);

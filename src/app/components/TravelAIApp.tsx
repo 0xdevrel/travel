@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
-import { Camera, MapPin, LogOut, Sparkles, Download, Share2, ArrowLeft, X } from 'lucide-react';
+import { Camera, MapPin, LogOut, Download, Share2, ArrowLeft, X, CreditCard, Sparkles } from 'lucide-react';
 import { FaUser } from 'react-icons/fa';
 import { processImageFile } from '../utils/imageUtils';
-import { MiniKit, ResponseEvent } from '@worldcoin/minikit-js';
+import { MiniKit, ResponseEvent, tokenToDecimals, Tokens, PayCommandInput, MiniAppPaymentSuccessPayload } from '@worldcoin/minikit-js';
 
 const LOCATIONS = [
   { id: 'france', name: 'France', flag: '🇫🇷', description: 'Eiffel Tower, Paris' },
@@ -39,9 +39,13 @@ export default function TravelAIApp() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState<'upload' | 'location' | 'generate' | 'result'>('upload');
+  const [currentStep, setCurrentStep] = useState<'upload' | 'location' | 'payment' | 'generate' | 'result'>('upload');
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Payment-related state
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Rotate loading messages every 2 seconds during generation
   useEffect(() => {
@@ -118,8 +122,89 @@ export default function TravelAIApp() {
 
   const handleLocationSelect = (locationId: string) => {
     setSelectedLocation(locationId);
-    setCurrentStep('generate');
+    setCurrentStep('payment');
   };
+
+  const handlePayment = useCallback(async () => {
+    try {
+      setIsPaying(true);
+      setPaymentError(null);
+
+      if (!MiniKit.isInstalled()) {
+        setPaymentError("Please open this app in World App to make payment.");
+        return;
+      }
+
+      // 1) Create a backend-issued reference for this payment
+      const initRes = await fetch("/api/initiate-payment", { 
+        method: "POST", 
+        credentials: "include" 
+      });
+      if (!initRes.ok) {
+        const msg = await initRes.text().catch(() => null);
+        setPaymentError(msg || "Unable to initiate payment. Please try again.");
+        return;
+      }
+      const { id } = await initRes.json();
+
+      // 2) Build the Pay payload
+      const payload: PayCommandInput = {
+        reference: id,
+        to: process.env.NEXT_PUBLIC_PAYMENT_RECIPIENT_ADDRESS || "0xDd2a0c0EA69A77a99779f611A5cB97c63b215124",
+        tokens: [
+          {
+            symbol: Tokens.WLD,
+            token_amount: tokenToDecimals(0.5, Tokens.WLD).toString(),
+          },
+        ],
+        description: "Travel AI - Generate personalized travel photo",
+      };
+
+      // 3) Execute payment in World App
+      const { finalPayload } = await MiniKit.commandsAsync.pay(payload);
+
+      // Handle different payment statuses
+      if (finalPayload.status == 'success') {
+        // 4) Confirm payment on backend
+        const confirmRes = await fetch("/api/confirm-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            payload: finalPayload as MiniAppPaymentSuccessPayload 
+          }),
+          credentials: "include",
+        });
+        const confirm = await confirmRes.json().catch(() => ({}));
+        if (confirmRes.ok && confirm?.success) {
+          // Payment successful, proceed to generate step
+          setCurrentStep('generate');
+          return;
+        }
+        const serverErr = confirm?.error || (await confirmRes.text().catch(() => ""));
+        if (serverErr) {
+          setPaymentError(`Payment verification failed: ${serverErr}`);
+          return;
+        }
+      } else {
+        // Handle non-success responses
+        const response = finalPayload as { status?: string; error?: string };
+        if (response.status === 'error') {
+          const errorMsg = response.error || 'Payment failed in World App';
+          setPaymentError(`Payment error: ${errorMsg}`);
+          return;
+        } else if (response.status === 'cancelled') {
+          setPaymentError("Payment was cancelled. Please try again.");
+          return;
+        }
+      }
+
+      setPaymentError("Payment not completed. Please try again.");
+    } catch (e) {
+      setPaymentError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setIsPaying(false);
+    }
+  }, []);
 
   const handleGenerate = async () => {
     if (!processedImageData) return;
@@ -137,23 +222,20 @@ export default function TravelAIApp() {
         body: JSON.stringify({
           imageDataUrl: processedImageData,
           location: selectedLocation,
+          paymentReference: 'completed', // Payment already completed
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle specific error cases gracefully
         const errorMessage = data.error || 'Failed to generate image';
-        
-        // Don't throw the error, just set it in state
         setError(errorMessage);
         return;
       }
 
       setGeneratedImage(data.imageDataUrl);
     } catch (error) {
-      // Only log network/parsing errors, not validation errors
       if (error instanceof Error && !error.message.includes('Uploaded image is not of a person')) {
         console.error('Error generating image:', error);
       }
@@ -172,6 +254,7 @@ export default function TravelAIApp() {
     setGeneratedImage(null);
     setError(null);
     setCurrentStep('upload');
+    setPaymentError(null);
   };
 
   const handleDownload = async () => {
@@ -309,11 +392,12 @@ export default function TravelAIApp() {
           {[
             { id: 'upload', label: 'Photo', icon: Camera },
             { id: 'location', label: 'Location', icon: MapPin },
+            { id: 'payment', label: 'Payment', icon: CreditCard },
             { id: 'generate', label: 'Generate', icon: Sparkles },
           ].map((step, index) => {
             const Icon = step.icon;
             const isActive = currentStep === step.id;
-            const isCompleted = ['upload', 'location', 'generate'].indexOf(currentStep) > index;
+            const isCompleted = ['upload', 'location', 'payment', 'generate'].indexOf(currentStep) > index;
             
             return (
               <div key={step.id} className="flex items-center">
@@ -324,8 +408,8 @@ export default function TravelAIApp() {
                 }`}>
                   <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                {index < 2 && (
-                  <div className={`w-4 sm:w-8 h-0.5 mx-1 sm:mx-2 ${
+                {index < 3 && (
+                  <div className={`w-4 sm:w-8 h-0.5 mx-1 ${
                     isCompleted ? 'bg-green-500' : 'bg-gray-200'
                   }`} />
                 )}
@@ -343,7 +427,8 @@ export default function TravelAIApp() {
             <button
               onClick={() => {
                 if (currentStep === 'location') setCurrentStep('upload');
-                else if (currentStep === 'generate') setCurrentStep('location');
+                else if (currentStep === 'payment') setCurrentStep('location');
+                else if (currentStep === 'generate') setCurrentStep('payment');
               }}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors min-h-[44px] px-2 -ml-2"
             >
@@ -428,6 +513,79 @@ export default function TravelAIApp() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {currentStep === 'payment' && (
+          <div className="max-w-sm mx-auto">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Required</h2>
+              <p className="text-gray-600">Pay 0.5 WLD to generate your travel photo</p>
+            </div>
+            
+            <div className="bg-white rounded-2xl p-6 mb-6">
+              <div className="flex items-center gap-4 mb-4">
+                <Image
+                  src={previewUrl || ''}
+                  alt="Preview"
+                  width={64}
+                  height={64}
+                  className="w-16 h-16 object-cover rounded-xl"
+                />
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">Your Photo</div>
+                  <div className="text-sm text-gray-500">Ready for AI processing</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="text-2xl">{selectedLocationData?.flag}</div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">{selectedLocationData?.name}</div>
+                  <div className="text-sm text-gray-500">{selectedLocationData?.description}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-blue-900">Secure Payment</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-blue-900">0.5 WLD</div>
+                  <div className="text-xs text-blue-600">per image</div>
+                </div>
+              </div>
+            </div>
+
+            
+            <button
+              onClick={handlePayment}
+              disabled={isPaying}
+              className="w-full bg-gray-900 text-white py-4 px-6 rounded-2xl font-semibold text-lg hover:bg-gray-800 active:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3 min-h-[56px] active:scale-[0.98]"
+            >
+              {isPaying ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing Payment...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-5 h-5" />
+                  Pay 0.5 WLD
+                </>
+              )}
+            </button>
+
+            {paymentError && (
+              <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                {paymentError}
+              </div>
+            )}
           </div>
         )}
 
