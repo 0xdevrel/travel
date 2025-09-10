@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Camera, Shield } from 'lucide-react';
 import { MiniKit, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
+import Link from 'next/link';
 
 export default function LandingPage() {
   const { login } = useAuth();
@@ -59,12 +60,20 @@ export default function LandingPage() {
         // 4. Get user info from the payload
         const walletAddress = (finalPayload as MiniAppWalletAuthSuccessPayload).address;
         
-        // Try to get username from MiniKit if available
+        // Get username from MiniKit user object after successful auth
         let username: string | undefined;
         try {
           if (MiniKit.isInstalled()) {
-            const userInfo = await MiniKit.getUserByAddress(walletAddress);
-            username = userInfo?.username;
+            // Wait a bit for MiniKit to be fully initialized
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            if (MiniKit.user?.username) {
+              username = MiniKit.user.username;
+            } else {
+              // Fallback: try to get user by address
+              const userInfo = await MiniKit.getUserByAddress(walletAddress);
+              username = userInfo?.username;
+            }
           }
         } catch (error) {
           console.warn('Could not fetch username:', error);
@@ -106,7 +115,7 @@ export default function LandingPage() {
             
             {/* Tagline */}
             <p className="text-gray-600 text-center mb-6">
-              Upload your photo and see yourself in amazing places around the world
+              Transform your pictures into travel photos ✨
             </p>
 
             {/* How it works */}
@@ -115,29 +124,54 @@ export default function LandingPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-gray-700 text-sm">Upload a clear photo of a person (full body recommended)</span>
+                  <span className="text-gray-700 text-sm">Upload a clear selfie or full-body photo</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-gray-700 text-sm">Choose from 9 amazing destinations</span>
+                  <span className="text-gray-700 text-sm">Pick from iconic destinations worldwide</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-gray-700 text-sm">Get your AI-generated travel photo</span>
+                  <span className="text-gray-700 text-sm">Personalized travel photo in seconds</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-gray-700 text-sm">Only 0.5 WLD per image</span>
                 </div>
               </div>
             </div>
 
-            {/* Pricing */}
-            <div className="mb-6 bg-gray-50 rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Pricing</h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">Per image</span>
-                  <span className="text-sm font-medium text-gray-900">0.5 WLD each</span>
+            {/* Preview Examples */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">See yourself in:</h3>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center">
+                  <div className="text-2xl mb-1">🇫🇷</div>
+                  <div className="text-xs text-gray-600">Paris</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-1">🇺🇸</div>
+                  <div className="text-xs text-gray-600">New York</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-1">🇯🇵</div>
+                  <div className="text-xs text-gray-600">Tokyo</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-1">🇬🇧</div>
+                  <div className="text-xs text-gray-600">London</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-1">🇮🇹</div>
+                  <div className="text-xs text-gray-600">Rome</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl mb-1">🇦🇺</div>
+                  <div className="text-xs text-gray-600">Sydney</div>
                 </div>
               </div>
             </div>
+
 
           {/* CTA Button */}
           <button
@@ -168,19 +202,22 @@ export default function LandingPage() {
           {/* Footer */}
           <div className="text-center mt-6">
             <p className="text-gray-500 text-sm">
-              Made with <span role="img" aria-label="love">❤️</span> by{' '}
-              <a
-                href="https://www.ibrlc.xyz/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 font-medium underline hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                tabIndex={0}
-              >
-                IBRL Labs
-              </a>
+              Made with <span role="img" aria-label="love">❤️</span> by IBRL Labs
             </p>
-            <p className="text-gray-400 text-xs mt-1">
-              Wallet authentication required • Built for World Mini Apps
+            <p>
+              <Link
+                href="/privacy"
+                className="text-gray-400 text-xs hover:text-gray-600 transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <span className="text-gray-300 text-xs">•</span>
+              <Link
+                href="/terms"
+                className="text-gray-400 text-xs hover:text-gray-600 transition-colors"
+              >
+                Terms of Service
+              </Link>
             </p>
           </div>
         </div>

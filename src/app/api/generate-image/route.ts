@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate location
-    const validLocations = ['france', 'switzerland', 'usa', 'italy', 'japan', 'egypt', 'uk', 'india', 'thailand'];
+    const validLocations = ['france', 'usa', 'uk', 'italy', 'japan', 'india', 'australia', 'brazil', 'dubai'];
     if (!validLocations.includes(location)) {
       return NextResponse.json(
         { error: 'Invalid location selected' },

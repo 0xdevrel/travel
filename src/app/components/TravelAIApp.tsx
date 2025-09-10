@@ -10,14 +10,14 @@ import { MiniKit, ResponseEvent } from '@worldcoin/minikit-js';
 
 const LOCATIONS = [
   { id: 'france', name: 'France', flag: '🇫🇷', description: 'Eiffel Tower, Paris' },
-  { id: 'switzerland', name: 'Switzerland', flag: '🇨🇭', description: 'Alpine mountains' },
   { id: 'usa', name: 'USA', flag: '🇺🇸', description: 'Statue of Liberty, New York' },
-  { id: 'italy', name: 'Italy', flag: '🇮🇹', description: 'Colosseum, Rome' },
-  { id: 'japan', name: 'Japan', flag: '🇯🇵', description: 'Fushimi Inari-taisha Shrine, Kyoto' },
-  { id: 'egypt', name: 'Egypt', flag: '🇪🇬', description: 'Pyramids, Giza' },
   { id: 'uk', name: 'UK', flag: '🇬🇧', description: 'Big Ben, London' },
+  { id: 'italy', name: 'Italy', flag: '🇮🇹', description: 'Colosseum, Rome' },
+  { id: 'japan', name: 'Japan', flag: '🇯🇵', description: 'Tokyo Skyline' },
   { id: 'india', name: 'India', flag: '🇮🇳', description: 'Taj Mahal, Agra' },
-  { id: 'thailand', name: 'Thailand', flag: '🇹🇭', description: 'Bangkok temples' },
+  { id: 'australia', name: 'Australia', flag: '🇦🇺', description: 'Sydney Opera House' },
+  { id: 'brazil', name: 'Brazil', flag: '🇧🇷', description: 'Christ the Redeemer, Rio' },
+  { id: 'dubai', name: 'Dubai', flag: '🇦🇪', description: 'Burj Khalifa, Dubai' },
 ];
 
 const LOADING_MESSAGES = [
@@ -360,7 +360,7 @@ export default function TravelAIApp() {
           <div className="max-w-sm mx-auto">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Photo</h2>
-              <p className="text-gray-600">Full body image of a person is required</p>
+              <p className="text-gray-600">Upload a clear selfie or full-body photo for best results</p>
             </div>
             
             <div
@@ -373,7 +373,7 @@ export default function TravelAIApp() {
                 </div>
                 <div>
                   <p className="text-gray-900 font-medium text-base sm:text-lg">Tap to upload</p>
-                  <p className="text-sm text-gray-500 mt-1 px-4">JPG, PNG up to 10MB • Person required</p>
+                  <p className="text-sm text-gray-500 mt-1 px-4">JPG, PNG up to 10MB • Clear face visible</p>
                 </div>
               </div>
             </div>

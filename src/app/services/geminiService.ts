@@ -17,14 +17,14 @@ const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 // Location-specific prompts for different destinations
 const LOCATION_PROMPTS = {
   france: "Place this person in front of the Eiffel Tower in Paris, France. The person should be standing naturally in front of this iconic landmark with the Parisian architecture visible in the background.",
-  switzerland: "Place this person in the Swiss Alps with snow-capped mountains in the background. The person should be standing in a scenic alpine location with beautiful mountain scenery.",
   usa: "Place this person in front of the Statue of Liberty in New York Harbor, USA. The person should be standing with the iconic statue visible in the background and the New York skyline.",
-  italy: "Place this person in front of the Colosseum in Rome, Italy. The person should be standing with the ancient Roman amphitheater visible in the background.",
-  japan: "Place this person in front of the Fushimi Inari-taisha Shrine in Kyoto, Japan. The person should be standing in front of the main gate and shrine architecture visible in the background.",
-  egypt: "Place this person in front of the Great Pyramids of Giza in Egypt. The person should be standing with the ancient pyramids visible in the background and the desert landscape.",
   uk: "Place this person in front of Big Ben and the Houses of Parliament in London, UK. The person should be standing with this iconic London landmark visible in the background.",
+  italy: "Place this person in front of the Colosseum in Rome, Italy. The person should be standing with the ancient Roman amphitheater visible in the background.",
+  japan: "Place this person in front of the Tokyo Skyline with the Tokyo Tower visible in the background. The person should be standing in a modern urban setting with the iconic Tokyo cityscape.",
   india: "Place this person in front of the Taj Mahal in Agra, India. The person should be standing with this beautiful white marble mausoleum visible in the background.",
-  thailand: "Place this person in front of the Temple of the Emerald Buddha (Wat Phra Kaew) in Bangkok, Thailand. The person should be standing with the ornate Thai temple architecture visible in the background."
+  australia: "Place this person in front of the Sydney Opera House in Sydney, Australia. The person should be standing with the iconic white sail-like architecture visible in the background and the Sydney Harbour Bridge.",
+  brazil: "Place this person in front of the Christ the Redeemer statue in Rio de Janeiro, Brazil. The person should be standing with the iconic statue visible in the background and the city of Rio below.",
+  dubai: "Place this person in front of the Burj Khalifa in Dubai, UAE. The person should be standing with the world's tallest building visible in the background and the modern Dubai skyline."
 };
 
 /**
