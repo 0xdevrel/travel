@@ -367,6 +367,58 @@ export default function TravelAIApp() {
 
   const selectedLocationData = LOCATIONS.find(loc => loc.id === selectedLocation);
 
+  // Helper function to format error messages for better UX
+  const formatErrorMessage = (error: string) => {
+    if (error.includes('Image size must be less than 10MB')) {
+      return {
+        title: 'Image Too Large',
+        message: 'Please use a smaller image (under 10MB).',
+        type: 'size'
+      };
+    }
+    if (error.includes('not of a person')) {
+      return {
+        title: 'No Person Found',
+        message: 'Please upload a clear photo of yourself.',
+        type: 'person'
+      };
+    }
+    if (error.includes('Invalid image file')) {
+      return {
+        title: 'Invalid Image',
+        message: 'Please use JPG, PNG, GIF, or WebP format.',
+        type: 'format'
+      };
+    }
+    if (error.includes('Failed to process image')) {
+      return {
+        title: 'Processing Failed',
+        message: 'Please try a different photo.',
+        type: 'processing'
+      };
+    }
+    if (error.includes('Payment required') || error.includes('Invalid or expired payment reference')) {
+      return {
+        title: 'Payment Required',
+        message: 'Please complete payment to continue.',
+        type: 'payment'
+      };
+    }
+    if (error.includes('Server configuration error') || error.includes('GEMINI_API_KEY')) {
+      return {
+        title: 'Service Unavailable',
+        message: 'Please try again in a few minutes.',
+        type: 'server'
+      };
+    }
+    // Default error
+    return {
+      title: 'Generation Failed',
+      message: 'Please try again.',
+      type: 'general'
+    };
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header - Hidden on result page */}
@@ -488,8 +540,21 @@ export default function TravelAIApp() {
             />
             
             {error && (
-              <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-                {error}
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-3">
+                {(() => {
+                  const errorInfo = formatErrorMessage(error);
+                  return (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-xs">!</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-red-800 text-sm">{errorInfo.title}</p>
+                        <p className="text-red-600 text-xs">{errorInfo.message}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -621,21 +686,38 @@ export default function TravelAIApp() {
                 <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <div className="w-8 h-8 text-red-600">⚠️</div>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Generation Failed</h3>
-                <p className="text-gray-600 mb-6">{error}</p>
-                <div className="space-y-3">
-                  <button
-                    onClick={resetFlow}
-                    className="w-full bg-gray-900 text-white py-3 px-4 rounded-2xl font-medium hover:bg-gray-800 transition-colors"
-                  >
-                    Upload New Photo
-                  </button>
-                  {error.includes('not of a person') && (
-                    <p className="text-sm text-gray-500">
-                      Make sure your photo clearly shows your face and body
-                    </p>
-                  )}
-                </div>
+                {(() => {
+                  const errorInfo = formatErrorMessage(error);
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">{errorInfo.title}</h3>
+                        <p className="text-gray-600 mb-4">{errorInfo.message}</p>
+                      </div>
+                      <div className="space-y-3">
+                        <button
+                          onClick={resetFlow}
+                          className="w-full bg-gray-900 text-white py-3 px-4 rounded-2xl font-medium hover:bg-gray-800 transition-colors"
+                        >
+                          {errorInfo.type === 'size' || errorInfo.type === 'format' || errorInfo.type === 'processing' 
+                            ? 'Try Different Photo' 
+                            : 'Upload New Photo'}
+                        </button>
+                        {errorInfo.type === 'server' && (
+                          <button
+                            onClick={() => {
+                              setError(null);
+                              setCurrentStep('payment');
+                            }}
+                            className="w-full bg-blue-600 text-white py-3 px-4 rounded-2xl font-medium hover:bg-blue-700 transition-colors"
+                          >
+                            Try Again
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ) : generatedImage ? (
               <div className="space-y-4">
