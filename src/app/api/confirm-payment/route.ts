@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MiniAppPaymentSuccessPayload, tokenToDecimals, Tokens } from "@worldcoin/minikit-js";
-import { paymentReferences } from "../_paymentStore";
+import { hasPaymentReference, cleanupExpiredReferences } from "../_paymentStore";
 
 interface IRequestPayload {
   payload: MiniAppPaymentSuccessPayload;
@@ -10,13 +10,16 @@ export async function POST(req: NextRequest) {
   try {
     const { payload } = (await req.json()) as IRequestPayload;
 
+    // Clean up expired references first
+    cleanupExpiredReferences();
+
     // Check we initiated this reference
     // Accept either: (a) in-memory match; or (b) HttpOnly cookie fallback set during initiation
     const cookieFallback = req.cookies.get("pay_ref")?.value;
-    const hasReferenceInMemory = !!payload?.reference && paymentReferences.has(payload.reference);
+    const hasReferenceInMemory = !!payload?.reference && hasPaymentReference(payload.reference);
     const referenceMatchesCookie = !!payload?.reference && cookieFallback === payload.reference;
     if (!payload?.reference || (!hasReferenceInMemory && !referenceMatchesCookie)) {
-      return NextResponse.json({ success: false, error: "Unknown reference" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Unknown or expired reference" }, { status: 400 });
     }
 
     // Expected payment details — 0.5 WLD for image generation

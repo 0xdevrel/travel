@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateTravelImage } from '../../services/geminiService';
-import { paymentReferences } from '../_paymentStore';
+import { hasPaymentReference, markPaymentReferenceUsed, cleanupExpiredReferences } from '../_paymentStore';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +20,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate payment reference format (should be a UUID without dashes)
+    if (!/^[a-f0-9]{32}$/i.test(paymentReference)) {
+      return NextResponse.json(
+        { error: 'Invalid payment reference format.' },
+        { status: 400 }
+      );
+    }
+
     // Validate location
     const validLocations = ['france', 'usa', 'uk', 'italy', 'japan', 'india', 'australia', 'brazil', 'dubai'];
     if (!validLocations.includes(location)) {
@@ -29,16 +37,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify payment reference exists (one-time use)
-    if (!paymentReferences.has(paymentReference)) {
+    // Clean up expired references first
+    cleanupExpiredReferences();
+
+    // Verify payment reference exists and is valid (one-time use)
+    if (!hasPaymentReference(paymentReference)) {
       return NextResponse.json(
-        { error: 'Invalid or expired payment reference. Please complete payment again.' },
+        { error: 'Invalid, expired, or already used payment reference. Please complete payment again.' },
         { status: 402 }
       );
     }
 
-    // Remove the payment reference (one-time use)
-    paymentReferences.delete(paymentReference);
+    // Mark the payment reference as used immediately (one-time use)
+    // This ensures each image generation requires a fresh payment
+    markPaymentReferenceUsed(paymentReference);
+    
+    console.log(`Payment reference ${paymentReference} consumed for image generation`);
 
     // Generate the travel image using Gemini AI
     const generatedImageDataUrl = await generateTravelImage(imageDataUrl, location);

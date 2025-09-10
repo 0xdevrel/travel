@@ -39,13 +39,14 @@ export default function TravelAIApp() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState<'upload' | 'location' | 'payment' | 'generate' | 'result'>('upload');
+  const [currentStep, setCurrentStep] = useState<'upload' | 'location' | 'payment' | 'result'>('upload');
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Payment-related state
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentReference, setPaymentReference] = useState<string | null>(null);
 
   // Rotate loading messages every 2 seconds during generation
   useEffect(() => {
@@ -125,6 +126,59 @@ export default function TravelAIApp() {
     setCurrentStep('payment');
   };
 
+  const handleGenerate = useCallback(async (paymentRef?: string) => {
+    const refToUse = paymentRef || paymentReference;
+    console.log('handleGenerate called with:', { 
+      hasProcessedImageData: !!processedImageData, 
+      paymentReference: refToUse 
+    });
+    
+    if (!processedImageData || !refToUse) {
+      console.log('handleGenerate early return - missing data');
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageDataUrl: processedImageData,
+          location: selectedLocation,
+          paymentReference: refToUse,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = data.error || 'Failed to generate image';
+        setError(errorMessage);
+        return;
+      }
+
+      setGeneratedImage(data.imageDataUrl);
+      // Clear payment reference immediately after successful generation
+      setPaymentReference(null);
+    } catch (error) {
+      if (error instanceof Error && !error.message.includes('Uploaded image is not of a person')) {
+        console.error('Error generating image:', error);
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate image';
+      setError(errorMessage);
+      // Clear payment reference on error too to prevent reuse
+      setPaymentReference(null);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [processedImageData, paymentReference, selectedLocation]);
+
   const handlePayment = useCallback(async () => {
     try {
       setIsPaying(true);
@@ -176,8 +230,12 @@ export default function TravelAIApp() {
         });
         const confirm = await confirmRes.json().catch(() => ({}));
         if (confirmRes.ok && confirm?.success) {
-          // Payment successful, proceed to generate step
-          setCurrentStep('generate');
+          // Payment successful, store reference and proceed to generate
+          setPaymentReference(id);
+          setCurrentStep('result');
+          // Automatically start generation with the payment reference
+          console.log('Starting image generation with payment reference:', id);
+          handleGenerate(id);
           return;
         }
         const serverErr = confirm?.error || (await confirmRes.text().catch(() => ""));
@@ -204,48 +262,7 @@ export default function TravelAIApp() {
     } finally {
       setIsPaying(false);
     }
-  }, []);
-
-  const handleGenerate = async () => {
-    if (!processedImageData) return;
-
-    setIsGenerating(true);
-    setError(null);
-    setCurrentStep('result');
-    
-    try {
-      const response = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageDataUrl: processedImageData,
-          location: selectedLocation,
-          paymentReference: 'completed', // Payment already completed
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errorMessage = data.error || 'Failed to generate image';
-        setError(errorMessage);
-        return;
-      }
-
-      setGeneratedImage(data.imageDataUrl);
-    } catch (error) {
-      if (error instanceof Error && !error.message.includes('Uploaded image is not of a person')) {
-        console.error('Error generating image:', error);
-      }
-      
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate image';
-      setError(errorMessage);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+  }, [handleGenerate]);
 
   const resetFlow = () => {
     setSelectedFile(null);
@@ -255,6 +272,7 @@ export default function TravelAIApp() {
     setError(null);
     setCurrentStep('upload');
     setPaymentError(null);
+    setPaymentReference(null); // Clear payment reference on reset
   };
 
   const handleDownload = async () => {
@@ -392,12 +410,11 @@ export default function TravelAIApp() {
           {[
             { id: 'upload', label: 'Photo', icon: Camera },
             { id: 'location', label: 'Location', icon: MapPin },
-            { id: 'payment', label: 'Payment', icon: CreditCard },
-            { id: 'generate', label: 'Generate', icon: Sparkles },
+            { id: 'payment', label: 'Generate', icon: Sparkles },
           ].map((step, index) => {
             const Icon = step.icon;
             const isActive = currentStep === step.id;
-            const isCompleted = ['upload', 'location', 'payment', 'generate'].indexOf(currentStep) > index;
+            const isCompleted = ['upload', 'location', 'payment'].indexOf(currentStep) > index;
             
             return (
               <div key={step.id} className="flex items-center">
@@ -408,7 +425,7 @@ export default function TravelAIApp() {
                 }`}>
                   <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                {index < 3 && (
+                {index < 2 && (
                   <div className={`w-4 sm:w-8 h-0.5 mx-1 ${
                     isCompleted ? 'bg-green-500' : 'bg-gray-200'
                   }`} />
@@ -428,7 +445,6 @@ export default function TravelAIApp() {
               onClick={() => {
                 if (currentStep === 'location') setCurrentStep('upload');
                 else if (currentStep === 'payment') setCurrentStep('location');
-                else if (currentStep === 'generate') setCurrentStep('payment');
               }}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors min-h-[44px] px-2 -ml-2"
             >
@@ -519,8 +535,8 @@ export default function TravelAIApp() {
         {currentStep === 'payment' && (
           <div className="max-w-sm mx-auto">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Required</h2>
-              <p className="text-gray-600">Pay 0.5 WLD to generate your travel photo</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Generate AI Image</h2>
+              <p className="text-gray-600">Pay 0.5 WLD to create your travel photo</p>
             </div>
             
             <div className="bg-white rounded-2xl p-6 mb-6">
@@ -575,8 +591,8 @@ export default function TravelAIApp() {
                 </>
               ) : (
                 <>
-                  <CreditCard className="w-5 h-5" />
-                  Pay 0.5 WLD
+                  <Sparkles className="w-5 h-5" />
+                  Generate AI Image
                 </>
               )}
             </button>
@@ -589,47 +605,6 @@ export default function TravelAIApp() {
           </div>
         )}
 
-        {currentStep === 'generate' && (
-          <div className="max-w-sm mx-auto">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Ready to Generate</h2>
-              <p className="text-gray-600">Your photo will be placed in {selectedLocationData?.name}</p>
-            </div>
-            
-            <div className="bg-white rounded-2xl p-6 mb-6">
-              <div className="flex items-center gap-4 mb-4">
-                <Image
-                  src={previewUrl || ''}
-                  alt="Preview"
-                  width={64}
-                  height={64}
-                  className="w-16 h-16 object-cover rounded-xl"
-                />
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">Your Photo</div>
-                  <div className="text-sm text-gray-500">Ready for AI processing</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <div className="text-2xl">{selectedLocationData?.flag}</div>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">{selectedLocationData?.name}</div>
-                  <div className="text-sm text-gray-500">{selectedLocationData?.description}</div>
-                </div>
-              </div>
-            </div>
-            
-            <button
-              onClick={handleGenerate}
-              disabled={!processedImageData}
-              className="w-full bg-gray-900 text-white py-4 px-6 rounded-2xl font-semibold text-lg hover:bg-gray-800 active:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3 min-h-[56px] active:scale-[0.98]"
-            >
-              <Sparkles className="w-5 h-5" />
-              Generate AI Image
-            </button>
-          </div>
-        )}
 
         {currentStep === 'result' && (
           <div className="max-w-sm mx-auto min-h-screen flex flex-col justify-start pt-2 sm:pt-4 -mb-1.5">
