@@ -16,15 +16,15 @@ const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 // Location-specific prompts for different destinations
 const LOCATION_PROMPTS = {
-  france: "Place this person in front of the Eiffel Tower in Paris, France. The person should be standing naturally in front of this iconic landmark with the Parisian architecture visible in the background.",
-  usa: "Place this person in front of the Statue of Liberty in New York Harbor, USA. The person should be standing with the iconic statue visible in the background and the New York skyline.",
-  uk: "Place this person in front of Big Ben and the Houses of Parliament in London, UK. The person should be standing with this iconic London landmark visible in the background.",
-  italy: "Place this person in front of the Colosseum in Rome, Italy. The person should be standing with the ancient Roman amphitheater visible in the background.",
-  japan: "Place this person in front of the Tokyo Skyline with the Tokyo Tower visible in the background. The person should be standing in a modern urban setting with the iconic Tokyo cityscape.",
-  india: "Place this person in front of the Taj Mahal in Agra, India. The person should be standing with this beautiful white marble mausoleum visible in the background.",
-  australia: "Place this person in front of the Sydney Opera House in Sydney, Australia. The person should be standing with the iconic white sail-like architecture visible in the background and the Sydney Harbour Bridge.",
-  brazil: "Place this person in front of the Christ the Redeemer statue in Rio de Janeiro, Brazil. The person should be standing with the iconic statue visible in the background and the city of Rio below.",
-  dubai: "Place this person in front of the Burj Khalifa in Dubai, UAE. The person should be standing with the world's tallest building visible in the background and the modern Dubai skyline."
+  france: "Use the image of person in this photo to keep the face as it. Place this person in front of the Eiffel Tower in Paris, France. The person should be standing naturally in front of this iconic landmark with the Parisian architecture visible in the background.",
+  usa: "Use the image of person in this photo to keep the face as it. Place this person in front of the Statue of Liberty in New York Harbor, USA. The person should be standing with the iconic statue visible in the background and the New York skyline.",
+  uk: "Use the image of person in this photo to keep the face as it. Place this person in front of Big Ben and the Houses of Parliament in London, UK. The person should be standing with this iconic London landmark visible in the background.",
+  italy: "Use the image of person in this photo to keep the face as it. Place this person in front of the Colosseum in Rome, Italy. The person should be standing with the ancient Roman amphitheater visible in the background.",
+  japan: "Use the image of person in this photo to keep the face as it. Place this person in front of the Tokyo Skyline with the Tokyo Tower visible in the background. The person should be standing in a modern urban setting with the iconic Tokyo cityscape.",
+  india: "Use the image of person in this photo to keep the face as it. Place this person in front of the Taj Mahal in Agra, India. The person should be standing with this beautiful white marble mausoleum visible in the background.",
+  australia: "Use the image of person in this photo to keep the face as it. Place this person in front of the Sydney Opera House in Sydney, Australia. The person should be standing with the iconic white sail-like architecture visible in the background and the Sydney Harbour Bridge.",
+  brazil: "Use the image of person in this photo to keep the face as it. Place this person in front of the Christ the Redeemer statue in Rio de Janeiro, Brazil. The person should be standing with the iconic statue visible in the background and the city of Rio below.",
+  dubai: "Use the image of person in this photo to keep the face as it. Place this person in front of the Burj Khalifa in Dubai, UAE. The person should be standing with the world's tallest building visible in the background and the modern Dubai skyline."
 };
 
 /**
@@ -34,7 +34,7 @@ const LOCATION_PROMPTS = {
  */
 function getFallbackPrompt(location: string): string {
   const locationName = location.charAt(0).toUpperCase() + location.slice(1);
-  return `Create a photograph of the person in this image as if they were visiting ${locationName}. The photograph should show the person in a natural pose at a famous landmark or location in ${locationName}. Ensure the final image is a clear photograph that looks authentic and realistic.`;
+  return `Use the image person in this photo to keep the face as it. Create a photograph of the person in this image as if they were visiting ${locationName}. The photograph should show the person in a natural pose at a famous landmark or location in ${locationName}. Ensure the final image is a clear photograph that looks authentic and realistic.`;
 }
 
 /**

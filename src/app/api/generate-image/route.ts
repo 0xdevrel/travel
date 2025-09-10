@@ -48,14 +48,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark the payment reference as used immediately (one-time use)
+    // Generate the travel image using Gemini AI
+    const generatedImageDataUrl = await generateTravelImage(imageDataUrl, location);
+
+    // Mark the payment reference as used only after successful generation (one-time use)
     // This ensures each image generation requires a fresh payment
     markPaymentReferenceUsed(paymentReference);
     
     console.log(`Payment reference ${paymentReference} consumed for image generation`);
-
-    // Generate the travel image using Gemini AI
-    const generatedImageDataUrl = await generateTravelImage(imageDataUrl, location);
 
     return NextResponse.json({
       success: true,
