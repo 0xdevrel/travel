@@ -38,6 +38,7 @@ export default function TravelAIApp() {
   const [processedImageData, setProcessedImageData] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<'upload' | 'location' | 'payment' | 'result'>('upload');
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
@@ -151,6 +152,7 @@ export default function TravelAIApp() {
           imageDataUrl: processedImageData,
           location: selectedLocation,
           paymentReference: refToUse,
+          userIdentifier: user?.username || user?.walletAddress || 'anonymous',
         }),
       });
 
@@ -162,7 +164,9 @@ export default function TravelAIApp() {
         return;
       }
 
-      setGeneratedImage(data.imageDataUrl);
+      // Store both the data URL for immediate display and the R2 URL for download
+      setGeneratedImage(data.imageDataUrl); // Always use data URL for immediate display
+      setGeneratedImageUrl(data.imageUrl); // R2 URL for download/share
       // Clear payment reference immediately after successful generation
       setPaymentReference(null);
     } catch (error) {
@@ -177,7 +181,7 @@ export default function TravelAIApp() {
     } finally {
       setIsGenerating(false);
     }
-  }, [processedImageData, paymentReference, selectedLocation]);
+  }, [processedImageData, paymentReference, selectedLocation, user?.username, user?.walletAddress]);
 
   const handlePayment = useCallback(async () => {
     try {
@@ -269,36 +273,22 @@ export default function TravelAIApp() {
     setPreviewUrl(null);
     setProcessedImageData(null);
     setGeneratedImage(null);
+    setGeneratedImageUrl(null);
     setError(null);
     setCurrentStep('upload');
     setPaymentError(null);
     setPaymentReference(null); // Clear payment reference on reset
   };
 
-  const handleDownload = async () => {
-    if (!generatedImage) return;
+  const handleDownload = () => {
+    if (!generatedImageUrl) return;
     
-    try {
-      // Convert data URL to blob
-      const response = await fetch(generatedImage);
-      const blob = await response.blob();
-      
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `travel-photo-${selectedLocationData?.name?.toLowerCase() || 'destination'}-${Date.now()}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Download failed:', error);
-    }
+    // Open the R2 URL in a new tab for download
+    window.open(generatedImageUrl, '_blank');
   };
 
   const handleShare = async () => {
-    if (!generatedImage) return;
+    if (!generatedImageUrl) return;
     
     // Check if MiniKit is available
     if (!MiniKit.isInstalled()) {
@@ -306,7 +296,7 @@ export default function TravelAIApp() {
       // Fallback to native Web Share API if available
       if (navigator.share) {
         try {
-          const response = await fetch(generatedImage);
+          const response = await fetch(generatedImageUrl);
           const blob = await response.blob();
           const file = new File([blob], `travel-photo-${selectedLocationData?.name.toLowerCase()}.jpg`, { type: 'image/jpeg' });
           
@@ -332,8 +322,8 @@ export default function TravelAIApp() {
     }
     
     try {
-      // Convert data URL to file
-      const response = await fetch(generatedImage);
+      // Convert R2 URL to file
+      const response = await fetch(generatedImageUrl);
       const blob = await response.blob();
       const file = new File([blob], `travel-photo-${selectedLocationData?.name.toLowerCase()}.jpg`, { type: 'image/jpeg' });
       
@@ -759,17 +749,37 @@ export default function TravelAIApp() {
                 <div className="flex gap-3">
                   <button 
                     onClick={handleDownload}
-                    className="flex-1 bg-blue-50 text-blue-700 py-3 px-4 rounded-2xl font-medium hover:bg-blue-100 active:bg-blue-200 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98] border border-blue-200"
+                    disabled={!generatedImageUrl}
+                    className="flex-1 bg-blue-50 text-blue-700 py-3 px-4 rounded-2xl font-medium hover:bg-blue-100 active:bg-blue-200 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98] border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Download className="w-4 h-4" />
-                    Download
+                    {!generatedImageUrl ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+                        Preparing...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Download
+                      </>
+                    )}
                   </button>
                   <button 
                     onClick={handleShare}
-                    className="flex-1 bg-teal-50 text-teal-700 py-3 px-4 rounded-2xl font-medium hover:bg-teal-100 active:bg-teal-200 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98] border border-teal-200"
+                    disabled={!generatedImageUrl}
+                    className="flex-1 bg-teal-50 text-teal-700 py-3 px-4 rounded-2xl font-medium hover:bg-teal-100 active:bg-teal-200 transition-colors flex items-center justify-center gap-2 min-h-[48px] active:scale-[0.98] border border-teal-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Share2 className="w-4 h-4" />
-                    Share
+                    {!generatedImageUrl ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-teal-700 border-t-transparent rounded-full animate-spin"></div>
+                        Preparing...
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-4 h-4" />
+                        Share
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

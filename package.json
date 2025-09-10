@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.883.0",
+    "@aws-sdk/s3-request-presigner": "3.883.0",
     "@google/genai": "^1.19.0",
     "@worldcoin/minikit-js": "^1.0.0",
     "lucide-react": "^0.543.0",

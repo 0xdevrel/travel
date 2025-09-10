@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateTravelImage } from '../../services/geminiService';
 import { hasPaymentReference, markPaymentReferenceUsed, cleanupExpiredReferences } from '../_paymentStore';
+import { uploadGeneratedImage, validateR2Config } from '../../services/r2Service';
 
 export async function POST(request: NextRequest) {
   try {
-    const { imageDataUrl, location, paymentReference } = await request.json();
+    const { imageDataUrl, location, paymentReference, userIdentifier } = await request.json();
 
-    if (!imageDataUrl || !location) {
+    if (!imageDataUrl || !location || !userIdentifier) {
       return NextResponse.json(
-        { error: 'Missing required parameters: imageDataUrl and location' },
+        { error: 'Missing required parameters: imageDataUrl, location, and userIdentifier' },
         { status: 400 }
       );
     }
@@ -48,18 +49,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate R2 configuration
+    if (!validateR2Config()) {
+      console.error('R2 configuration is incomplete');
+      return NextResponse.json(
+        { error: 'Storage configuration error. Please try again later.' },
+        { status: 500 }
+      );
+    }
+
     // Generate the travel image using Gemini AI
     const generatedImageDataUrl = await generateTravelImage(imageDataUrl, location);
 
-    // Mark the payment reference as used only after successful generation (one-time use)
+    // Upload the generated image to R2
+    const uploadResult = await uploadGeneratedImage(generatedImageDataUrl, userIdentifier, location);
+    
+    if (!uploadResult.success) {
+      console.error('Failed to upload to R2:', uploadResult.error);
+      return NextResponse.json(
+        { error: 'Failed to save generated image. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    // Mark the payment reference as used only after successful generation and upload (one-time use)
     // This ensures each image generation requires a fresh payment
     markPaymentReferenceUsed(paymentReference);
     
-    console.log(`Payment reference ${paymentReference} consumed for image generation`);
+    console.log(`Payment reference ${paymentReference} consumed for image generation and uploaded to R2: ${uploadResult.key}`);
 
     return NextResponse.json({
       success: true,
-      imageDataUrl: generatedImageDataUrl
+      imageDataUrl: generatedImageDataUrl, // For immediate display
+      imageUrl: uploadResult.url, // For download/share
+      imageKey: uploadResult.key
     });
 
   } catch (error) {
